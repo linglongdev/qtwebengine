@@ -1,0 +1,98 @@
+package:
+  id: qtwebengine
+  kind: lib
+  version: 5.11.3
+
+base:
+  id: org.deepin.base
+  version: 20.5.0
+
+depends:
+- id: qtbase
+  version: 5.11.3.15
+- id: qtdeclarative
+  version: 5.11.3
+- id: qtlocation
+  version: 5.11.3
+- id: qtquickcontrols2
+  version: 5.11.3
+- id: qtwebchannel
+  version: 5.11.3
+- id: qttools
+  version: 5.11.3
+
+source:
+  kind: git
+  url: https://github.com/deepin-community/qtwebengine-opensource-src.git
+  version: 5.11.3
+  commit: d108e14f5723273523dd566074660e99ca978816
+  patch:
+  - system-lcms2.patch
+  - system-nspr-prtime.patch
+  - system-icu-utf.patch
+  - verbose-gn-bootstrap.patch
+  - mipsel-ptrace-include.patch
+  - mipsel-no-dav1d.patch
+  - mipsel-link-atomic.patch
+  - sandbox-time64-syscalls.patch
+  - mipsel-code-range-size.patch
+  - remove-benchmark-from-inputs.patch
+  - python2.patch
+  - breakpad-getcontext.patch
+  - mipsel-ggc-min-expand.patch
+  - mips64el-crashpad.patch
+  - mips64el-bad-define.patch
+  - mipsel-syscall-ranges.patch
+  - mips64el-kernel_stat64.patch
+  - uniontech0001-deepin-build.patch
+  - uniontech0002-fit-mips64el.patch
+  - uniontech0003-fit-sw64.patch
+  - uniontech0004-fit-loong64.patch
+  - CVE-2022-1096.patch
+  - ''
+build:
+  kind: manual
+  manual:
+    configure: |
+      # exec bash
+        args="-proprietary-codecs \
+              -feature-webengine-system-libvpx \
+              -system-ffmpeg \
+              -system-opus \
+              -system-webp \
+              -system-webengine-icu"
+
+        files="src/3rdparty/chromium/third_party/analytics/google-analytics-bundle.js \
+        src/3rdparty/chromium/third_party/web-animations-js/sources/web-animations.min.js \
+        src/3rdparty/chromium/third_party/web-animations-js/sources/web-animations-next-lite.min.js \
+        src/3rdparty/chromium/third_party/web-animations-js/sources/web-animations-next.min.js \
+        src/3rdparty/chromium/third_party/WebKit/Source/devtools/front_end/audits2_worker/lighthouse/lighthouse-background.js \
+        src/3rdparty/chromium/third_party/WebKit/Source/devtools/front_end/diff/diff_match_patch.js \
+        src/3rdparty/chromium/third_party/WebKit/Source/devtools/front_end/formatter_worker/acorn/acorn.js \
+        src/3rdparty/chromium/third_party/WebKit/Source/devtools/front_end/gonzales/gonzales-scss.js \
+        src/3rdparty/chromium/third_party/WebKit/Source/devtools/front_end/network/NetworkConfigView.js \
+        src/3rdparty/chromium/third_party/WebKit/Source/devtools/front_end/settings/EditFileSystemView.js \
+        src/3rdparty/chromium/third_party/WebKit/Source/devtools/front_end/terminal/xterm.js/build/xterm.css \
+        src/3rdparty/chromium/third_party/WebKit/Source/devtools/front_end/terminal/xterm.js/build/xterm.js \
+        src/3rdparty/chromium/ui/webui/resources/js/jstemplate_compiled.js"
+
+        for fname in ${files}; do \
+        mkdir -p $(dirname ${fname}); \
+        touch ${fname};done
+
+        echo "QMAKE_CFLAGS -= -g" >> .qmake.conf
+        echo "QMAKE_CFLAGS -= -gstabs" >> .qmake.conf
+        echo "QMAKE_CXXFLAGS -= -g" >> .qmake.conf
+        echo "QMAKE_CXXFLAGS -= -gstabs" >> .qmake.conf
+        echo "QT_CONFIG -= force_debug_info" >> .qmake.conf
+        echo "QT_CONFIG -= separate_debug_info" >> .qmake.conf
+        echo "CONFIG -= precompile_header" >> .qmake.conf
+        echo "QMAKE_LFLAGS += -Wl,--no-keep-memory" >> .qmake.conf
+        # Missing hardening flag detected by blhc
+        echo "QMAKE_LFLAGS += -Wl,-z,now" >> .qmake.conf
+
+        mkdir build
+        cd build
+        qmake QMAKE_EXTRA_ARGS+="${args}" ..
+        make -j6
+        make install -j
